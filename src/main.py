@@ -46,10 +46,10 @@ def simulate(force, state):
     temp = (force + POLEMASS_LENGTH * theta_dot  * theta_dot * sintheta) \
             / TOTAL_MASS
 
-    thetaacc = (GRAVITY * sintheta - costheta* temp) / (LENGTH \
+    thetaacc = (GRAVITY * sintheta - costheta * temp) / (LENGTH \
                 * (FOURTHIRDS - MASSPOLE * costheta * costheta / TOTAL_MASS))
 
-    xacc = temp - POLEMASS_LENGTH * thetaacc* costheta / TOTAL_MASS
+    xacc = temp - POLEMASS_LENGTH * thetaacc * costheta / TOTAL_MASS
 
     # Update the four state variables, using Euler's method.
 
