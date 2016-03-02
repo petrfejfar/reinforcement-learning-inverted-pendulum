@@ -21,8 +21,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-from math import cos, sin
+from math import cos, sin, floor, pi
+import matplotlib.pyplot as plt
 import random
+
 
 def simulate(force, state):
     """Compute the next states given the force and the current states"""
@@ -43,11 +45,9 @@ def simulate(force, state):
     costheta = cos(theta)
     sintheta = sin(theta)
 
-    temp = (force + POLEMASS_LENGTH * theta_dot  * theta_dot * sintheta) \
-            / TOTAL_MASS
+    temp = (force + POLEMASS_LENGTH * theta_dot * theta_dot * sintheta) / TOTAL_MASS
 
-    thetaacc = (GRAVITY * sintheta - costheta * temp) / (LENGTH \
-                * (FOURTHIRDS - MASSPOLE * costheta * costheta / TOTAL_MASS))
+    thetaacc = (GRAVITY * sintheta - costheta * temp) / (LENGTH * (FOURTHIRDS - MASSPOLE * costheta * costheta / TOTAL_MASS))
 
     xacc = temp - POLEMASS_LENGTH * thetaacc * costheta / TOTAL_MASS
 
@@ -58,18 +58,45 @@ def simulate(force, state):
             theta + STEP * theta_dot,
             theta_dot + STEP * thetaacc)
 
+
 def system_safe(state):
     """Is the system in stable?"""
-    return abs(state[0]) < 2.4 and abs(state[2]) < 12
+    theta = state[2] - (2*pi) * floor((state[2] + pi) / (2*pi))
+    return abs(state[0]) < 2.4 and abs(theta) < 0.20943951
+
+
+def draw_state(state, filename):
+    gra = int(122)
+    plt.clf()
+    plt.xlim([-2.4, 2.4])
+    plt.ylim([-1, 3.8])
+
+    plt.title('state: %+.2f %+.2f %+.2f %+.2f' % state)
+    if system_safe(state):
+        color = "green"
+    else:
+        color = "red"
+
+    # draw state
+    plt.plot([state[0] + 0, state[0] + sin(state[2])], [0, cos(state[2])], color=color, aa=True)
+
+    # draw 12 degree safezone
+    twelve_rads = 0.20943951
+    plt.plot([state[0] + 0, state[0] + sin(twelve_rads)], [0, cos(twelve_rads)], color="grey", aa=True)
+    plt.plot([state[0] + 0, state[0] + sin(-twelve_rads)], [0, cos(-twelve_rads)], color="grey", aa=True)
+
+    plt.savefig(filename)
+
 
 def main():
     """Main procedure"""
-    state = (0.0, 0, 0, 0)
+    state = (0.0, 0.0, 0.0, 0.0)
 
     for i in range(0, 1000, 2):
         print("%.2fsec" % (i / 100.0), state)
         print(system_safe(state))
         state = simulate(10 if bool(random.getrandbits(1)) else -10, state)
+        draw_state(state, "output/state_%03dms.png" % (i/2))
 
 if __name__ == '__main__':
     main()

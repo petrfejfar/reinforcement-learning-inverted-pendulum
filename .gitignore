@@ -10,3 +10,6 @@
 *.vrb
 *.synctex.gz
 *.te~
+vendor/
+simulation.mp4
+output/
