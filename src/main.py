@@ -26,7 +26,10 @@ import os
 from math import cos, sin, floor, pi
 import matplotlib.pyplot as plt
 
+from Qtable import QTable
+
 _DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 def simulate(force, state):
     """Compute the next states given the force and the current states"""
@@ -67,12 +70,7 @@ def system_safe(state):
     return abs(state[0]) < 2.4 and abs(theta) < 0.20943951
 
 
-<<<<<<< HEAD
 def draw_state(state, force, filename):
-    gra = int(122)
-=======
-def draw_state(state, filename):
->>>>>>> 6bf535f47c465601dffa94b5fb1a2ec62e9084d6
     plt.clf()
     plt.xlim([-2.4, 2.4])
     plt.ylim([-1, 3.8])
@@ -102,28 +100,26 @@ def draw_state(state, filename):
 
 def main():
     """Main procedure"""
-    state = (-2.4, 0.0, 0.0, 0.0)
+
+    qtable = QTable([-10, 10], [(-2.4, 2.4, 24), (-12, 12, 24), (-pi, pi, 120), (-pi, pi, 60)])
+    return
+
+    state = (0.0, 0.0, 0.1, 0.0)
 
     for i in range(0, 1000, 2):
         print("%.2fsec" % (i / 100.0), state)
         print(system_safe(state))
-<<<<<<< HEAD
-        # if state[2] > 0:
-        #     force = 10
-        #     if state[2] < 0.2 and state[3] < -0.5:
-        #         force = -10
-        # else:
-        #     force = -10
-        #     if state[2] > -0.2 and state[3] > 0.5:
-        #         force = 10
-        force = 10
+        if state[2] > 0:
+            force = 10
+            if state[2] < 0.2 and state[3] < -0.5:
+                force = -10
+        else:
+            force = -10
+            if state[2] > -0.2 and state[3] > 0.5:
+                force = 10
 
         state = simulate(force, state)
-        draw_state(state, force, "output/state_%03dms.png" % (i/2))
-=======
-        state = simulate(10 if bool(random.getrandbits(1)) else -10, state)
-        draw_state(state, os.path.join(_DIR, "./../output/state_%03dms.png" % (i/2)))
->>>>>>> 6bf535f47c465601dffa94b5fb1a2ec62e9084d6
+        draw_state(state, force, os.path.join(_DIR, "./../output/state_%03dms.png" % (i/2)))
 
 if __name__ == '__main__':
     main()
