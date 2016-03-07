@@ -2,4 +2,4 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-ffmpeg -framerate 50 -i $DIR/output/state_%03dms.png -c:v libx264 -r 30 -pix_fmt yuv420p $DIR/simulation.mp4
+ffmpeg -framerate 50 -i $DIR/output/state_%03dms.png -c:v libx264 -r 30 -pix_fmt yuv420p $DIR/simulation.mp4 -y

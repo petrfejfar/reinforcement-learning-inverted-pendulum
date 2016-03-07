@@ -10,6 +10,8 @@
 *.vrb
 *.synctex.gz
 *.te~
+
 vendor/
+__pycache__
 simulation.mp4
 output/

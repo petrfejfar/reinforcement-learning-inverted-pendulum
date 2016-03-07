@@ -23,7 +23,11 @@ THE SOFTWARE.
 
 import random
 import os
+import subprocess
+
 from math import cos, sin, floor, pi
+from sys import platform as _platform
+
 import matplotlib.pyplot as plt
 
 from Qtable import QTable
@@ -97,29 +101,60 @@ def draw_state(state, force, filename):
 
     plt.savefig(filename)
 
+def condition_based_action(state):
+    force = 0
+
+    if state[2] > 0:
+        force = 10
+        if state[2] < 0.2 and state[3] < -0.5:
+            force = -10
+    else:
+        force = -10
+        if state[2] > -0.2 and state[3] > 0.5:
+            force = 10
+
+    return force
+
+def r_time(state):
+    """Return 2 (reward for two milliseconds in safe state) or 0"""
+    if system_safe(state):
+        return 2
+    else:
+        return 0
+
+def r_theta(state):
+    """Return reward based on pole angle"""
+    return state[2] ** 2
 
 def main():
     """Main procedure"""
 
+    # Init data structures
     qtable = QTable([-10, 10], [(-2.4, 2.4, 24), (-12, 12, 24), (-pi, pi, 120), (-pi, pi, 60)])
-    return
 
-    state = (0.0, 0.0, 0.1, 0.0)
+    # Reinforcement learning
+    # TODO
+
+    # Run inverted pendulum system simulation
+    state = (0.0, 0.0, random.random() - 0.5, 0.0) # slightly skew pole as start state
 
     for i in range(0, 1000, 2):
         print("%.2fsec" % (i / 100.0), state)
         print(system_safe(state))
-        if state[2] > 0:
-            force = 10
-            if state[2] < 0.2 and state[3] < -0.5:
-                force = -10
-        else:
-            force = -10
-            if state[2] > -0.2 and state[3] > 0.5:
-                force = 10
+
+        force = condition_based_action(state)
+        # force = qtable.get_best_action(state)
 
         state = simulate(force, state)
         draw_state(state, force, os.path.join(_DIR, "./../output/state_%03dms.png" % (i/2)))
+
+    # Generate video
+    if _platform == "linux":                                         # GNU/Linux
+        subprocess.call(os.path.join(_DIR, "./../make_video.sh"), shell=True)
+    elif _platform == "darwin":                                           # OS X
+        pass
+    elif _platform == "win32" or _platform == "cygwin":             # Windows...
+        pass
 
 if __name__ == '__main__':
     main()
