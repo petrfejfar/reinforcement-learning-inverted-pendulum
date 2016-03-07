@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 from Qtable import QTable
 
 _DIR = os.path.dirname(os.path.realpath(__file__))
-
+INF = 100000
 
 def simulate(force, state):
     """Compute the next states given the force and the current states"""
@@ -74,17 +74,19 @@ def system_safe(state):
     return abs(state[0]) < 2.4 and abs(theta) < 0.20943951
 
 
-def draw_state(state, force, filename):
+def draw_state(state, force, filename, qTable):
     plt.clf()
     plt.xlim([-2.4, 2.4])
     plt.ylim([-1, 3.8])
 
-    plt.title('state: %+.2f %+.2f %+.2f %+.2f' % state)
+    plt.title('state: %+.2f %+.2f %+.2f %+.2f' % state + " %f" % r_theta(state))
     if system_safe(state):
         color = "green"
     else:
         color = "red"
 
+    plt.annotate("%09.2f" % 1.234, (-2, 3), color="red")
+    plt.annotate("%09.2f" % 1.223, (1.5, 3), color="red")
     # draw state
     plt.plot([state[0] + 0, state[0] + sin(state[2])], [0, cos(state[2])], color=color, aa=True)
 
@@ -124,26 +126,35 @@ def r_time(state):
 
 def r_theta(state):
     """Return reward based on pole angle"""
-    return state[2] ** 2
+    if abs(state[0]) >= 2.4:
+        return -INF
+    return  - (state[2] ** 2)
 
 def main():
     """Main procedure"""
 
     # Init data structures
-    qtable = QTable([-10, 10], [(-2.4, 2.4, 24), (-12, 12, 24), (-pi, pi, 120), (-pi, pi, 60)])
+    qtable = QTable([-10, 10], [(-2.4, 2.4, 24), (-12, 12, 24), (-pi, pi, 10), (-pi, pi, 10)])
 
     # Reinforcement learning
-    # TODO
-
+    # qtable.learn(simulate, r_theta)
+    qtable.learn(simulate, r_time)
+    # return
     # Run inverted pendulum system simulation
-    state = (0.0, 0.0, random.random() - 0.5, 0.0) # slightly skew pole as start state
+    state = (0.0, 0.0, 0.0, 0.0)
 
     for i in range(0, 1000, 2):
         print("%.2fsec" % (i / 100.0), state)
         print(system_safe(state))
 
-        force = condition_based_action(state)
-        # force = qtable.get_best_action(state)
+        # force = condition_based_action(state)
+        # try:
+        force = qtable.get_best_action(state)
+        # except KeyError:
+        #     if (state[0] >= 2.4):
+        #         force = 10
+        #     else:
+        #         force = -10
 
         state = simulate(force, state)
         draw_state(state, force, os.path.join(_DIR, "./../output/state_%03dms.png" % (i/2)))
