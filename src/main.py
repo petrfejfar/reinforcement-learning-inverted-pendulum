@@ -85,8 +85,9 @@ def draw_state(state, force, filename, qTable):
     else:
         color = "red"
 
-    plt.annotate("%09.2f" % 1.234, (-2, 3), color="red")
-    plt.annotate("%09.2f" % 1.223, (1.5, 3), color="red")
+    qVals = qTable.get_q_vals(state)
+    plt.annotate("%09.2f" % qVals[0], (-2, 3), color="red" if force > 0 else "green")
+    plt.annotate("%09.2f" % qVals[1], (1.5, 3), color="green" if force > 0 else "red")
     # draw state
     plt.plot([state[0] + 0, state[0] + sin(state[2])], [0, cos(state[2])], color=color, aa=True)
 
@@ -117,34 +118,48 @@ def condition_based_action(state):
 
     return force
 
+def deg_to_rad(deg):
+    return deg * pi / 180.0
+
 def r_time(state):
     """Return 2 (reward for two milliseconds in safe state) or 0"""
     if system_safe(state):
-        return 2
+        return 1
     else:
         return 0
+
+def r_safe(state):
+    """Return 0 if safe, -1 otherwise"""
+    if system_safe(state):
+        return 0
+    else:
+        return -1
 
 def r_theta(state):
     """Return reward based on pole angle"""
     if abs(state[0]) >= 2.4:
-        return -INF
-    return  - (state[2] ** 2)
+        return -pi ** 2
+    # return  - (deg_to_rad(state[2]) ** 2)
+    return  - (state[2]) ** 2
 
 def main():
     """Main procedure"""
 
     # Init data structures
-    qtable = QTable([-10, 10], [(-2.4, 2.4, 24), (-12, 12, 24), (-pi, pi, 10), (-pi, pi, 10)])
+    twelve_rads = deg_to_rad(12)
+    fifty_rads = deg_to_rad(50)
+    qtable = QTable([-10, 10], [(-2.4* 1.1, 2.4 * 1.1, 5), (-2, 2, 5), (-twelve_rads * 1.1, twelve_rads * 1.1, 7), (-fifty_rads * 1.5, fifty_rads * 1.5, 3)])
 
     # Reinforcement learning
-    # qtable.learn(simulate, r_theta)
-    qtable.learn(simulate, r_time)
+    # qtable.learn(simulate, r_theta, system_safe)
+    # qtable.learn(simulate, r_safe, system_safe)
+    qtable.learn(simulate, r_time, system_safe)
     # return
     # Run inverted pendulum system simulation
     state = (0.0, 0.0, 0.0, 0.0)
 
     for i in range(0, 1000, 2):
-        print("%.2fsec" % (i / 100.0), state)
+        print("%.2fsec" % (i / 100.0), state, qtable.get_q_vals(state))
         print(system_safe(state))
 
         # force = condition_based_action(state)
@@ -157,7 +172,7 @@ def main():
         #         force = -10
 
         state = simulate(force, state)
-        draw_state(state, force, os.path.join(_DIR, "./../output/state_%03dms.png" % (i/2)))
+        draw_state(state, force, os.path.join(_DIR, "./../output/state_%03dms.png" % (i/2)), qtable)
 
     # Generate video
     if _platform == "linux":                                         # GNU/Linux
