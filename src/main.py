@@ -148,9 +148,7 @@ def main():
     # Init data structures
     twelve_rads = deg_to_rad(12)
     fifty_rads = 0.5
-    qtable = QTable([-10, 10], [(-2.4, 2.4, 8), (-1, 1, 10), (-twelve_rads, twelve_rads, 14), (-fifty_rads, fifty_rads, 14)])
-
-
+    qtable = QTable([-10, 10], [(-2.4, 2.4, 8), (-1, 1, 10), (-twelve_rads, twelve_rads, 28), (-fifty_rads, fifty_rads, 28)])
 
     # twelve_rads = deg_to_rad(12)
     # fifty_rads = deg_to_rad(50)
@@ -166,7 +164,10 @@ def main():
     # Reinforcement learning
     # qtable.learn(simulate, r_theta, system_safe)
     # qtable.learn(simulate, r_safe, system_safe)
+    qtable.draw("stav.png")
     qtable.learn(simulate, r_time, system_safe)
+    qtable.draw("stav.png")
+
     # return
     # Run inverted pendulum system simulation
     state = (0.0, 0.0, 0.0, 0.0)
