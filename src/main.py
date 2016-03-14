@@ -21,7 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import random
+import glob
 import os
 import subprocess
 
@@ -147,8 +147,21 @@ def main():
 
     # Init data structures
     twelve_rads = deg_to_rad(12)
-    fifty_rads = deg_to_rad(50)
-    qtable = QTable([-10, 10], [(-2.4* 1.1, 2.4 * 1.1, 5), (-2, 2, 5), (-twelve_rads * 1.1, twelve_rads * 1.1, 7), (-fifty_rads * 1.5, fifty_rads * 1.5, 3)])
+    fifty_rads = 0.5
+    qtable = QTable([-10, 10], [(-2.4, 2.4, 8), (-1, 1, 10), (-twelve_rads, twelve_rads, 14), (-fifty_rads, fifty_rads, 14)])
+
+
+
+    # twelve_rads = deg_to_rad(12)
+    # fifty_rads = deg_to_rad(50)
+    # qtable = QTable([-10, 10], [(-2.4, 2.4, 4), (-2, 2, 30), (-twelve_rads, twelve_rads, 96), (-fifty_rads, fifty_rads, 25)]) # inf - nahoda
+
+
+
+    # fifty_rads = deg_to_rad(50)
+    # qtable = QTable([-10, 10, -30, 30], [(-2.4, 2.4, 16), (-2, 2, 20), (-twelve_rads, twelve_rads, 48), (-fifty_rads, fifty_rads, 12)]) # 48s - nahoda
+
+
 
     # Reinforcement learning
     # qtable.learn(simulate, r_theta, system_safe)
@@ -158,18 +171,24 @@ def main():
     # Run inverted pendulum system simulation
     state = (0.0, 0.0, 0.0, 0.0)
 
-    for i in range(0, 1000, 2):
+    # Clear after previous run
+    for f in glob.glob(os.path.join(_DIR, "./../output/state_*ms.png")):
+        try:
+            if os.path.isfile(f):
+                os.unlink(f)
+        except Exception as e:
+            print(e)
+
+    for i in range(0, 30001, 2):
         print("%.2fsec" % (i / 100.0), state, qtable.get_q_vals(state))
         print(system_safe(state))
 
-        # force = condition_based_action(state)
-        # try:
+
+        if not system_safe(state):
+            print("FAIL")
+            break
+
         force = qtable.get_best_action(state)
-        # except KeyError:
-        #     if (state[0] >= 2.4):
-        #         force = 10
-        #     else:
-        #         force = -10
 
         state = simulate(force, state)
         draw_state(state, force, os.path.join(_DIR, "./../output/state_%03dms.png" % (i/2)), qtable)

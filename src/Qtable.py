@@ -27,8 +27,8 @@ import random
 from math import cos, sin, floor, pi
 
 class QTable:
-    iterations = 10000
-    max_state_transitions =  100000
+    iterations = 1500
+    max_state_transitions =  30000
 
     pit = ("-100","-100","-100","-100")
 
@@ -71,7 +71,7 @@ class QTable:
         # print("")
         # print(all_states)
 
-        self._table = dict((el, [0,0]) for el in all_states)
+        self._table = dict((el, [0] * len(actions)) for el in all_states)
 
     def get_q_vals(self, s):
         state_norm = self._normalize_state(s)
@@ -93,17 +93,21 @@ class QTable:
             transition = 0
             success = False
 
+            updates = []
+
             while True:
                 transition += 1
 
                 a = self._get_random_action(state)
                 # a = self._get_best_action_index(state)
-                r = reward_f(state)
+                # r = reward_f(state)
 
                 next_s = simulate_f(self._action_map[a], state)
+                r = reward_f(next_s)
                 next_s_norm = self._normalize_state(next_s)
 
-                self._update_Q(state_norm, a, next_s_norm, r)
+                updates.append((state_norm, a, next_s_norm, r))
+                # self._update_Q(state_norm, a, next_s_norm, r)
 
                 if not is_safe(next_s):
                     break
@@ -116,6 +120,9 @@ class QTable:
                 state = next_s
                 state_norm = self._normalize_state(state)
 
+            print(updates[-1])
+            for state_norm, a, next_s_norm, r in reversed(updates):
+                self._update_Q(state_norm, a, next_s_norm, r)
 
             # if not is_safe(state):
             if not is_safe(next_s):
@@ -159,7 +166,16 @@ class QTable:
 
         kappa = 1.7
 
-        total = sum(kappa**w for w in self._table[state_norm])
+        max_w = 1000
+
+        total = 0
+
+        for w in self._table[state_norm]:
+            if w > max_w:
+                w = max_w
+            total += kappa**w
+
+        # total = sum(kappa**w for w in self._table[state_norm])
 
         r = random.random()
         upto = 0
@@ -167,6 +183,8 @@ class QTable:
         # print("random ", r)
         for c, w in enumerate(self._table[state_norm]):
             # print("Q ", c, w)
+            if w > max_w:
+                w = max_w
             delta_w = kappa**w / total
             # print(delta_w)
             if upto + delta_w >= r:
@@ -182,11 +200,14 @@ class QTable:
         # print(self._table[s1])
         # print(max(self._table[s1]))
 
-        # if s1 == self.pit:
-            # print("%f + %f * %f" % (r, self._gamma, max(self._table[s1])))
         # print(s1)
 
         sample = r + self._gamma * max(self._table[s1])
+
+        # if s1 == self.pit:
+        #     print("%f + %f * %f" % (r, self._gamma, max(self._table[s1])))
+        #     print("%f + %f * (%f - %f)" % (self._table[s][a], self._learning_rate, sample, self._table[s][a]))
+
         self._table[s][a] = self._table[s][a] + self._learning_rate * (sample - self._table[s][a])
 
         # print("Old val ", self._table[s][a])
