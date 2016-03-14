@@ -164,7 +164,6 @@ def main():
     # Reinforcement learning
     # qtable.learn(simulate, r_theta, system_safe)
     # qtable.learn(simulate, r_safe, system_safe)
-    qtable.draw("stav.png")
     qtable.learn(simulate, r_time, system_safe)
     qtable.draw("stav.png")
 
