@@ -24,7 +24,7 @@ THE SOFTWARE.
 import itertools
 import random
 
-from math import cos, sin, floor, pi
+from math import cos, sin, floor, pi, e
 
 class QTable:
     iterations = 1500
@@ -160,40 +160,28 @@ class QTable:
         #         state_norm = self._normalize_state(state)
 
     def _get_random_action(self, s):
-        # return random.choice(self._actions)
-
         state_norm = self._normalize_state(s)
 
-        kappa = 1.7
-
-        max_w = 1000
-
+        T = 4
+        kappa = e
         total = 0
 
+        max_w = max(self._table[state_norm])
         for w in self._table[state_norm]:
-            if w > max_w:
-                w = max_w
-            total += kappa**w
-
-        # total = sum(kappa**w for w in self._table[state_norm])
+            total += kappa**((w-max_w)/T)
 
         r = random.random()
         upto = 0
         choice = 0
-        # print("random ", r)
+
         for c, w in enumerate(self._table[state_norm]):
-            # print("Q ", c, w)
-            if w > max_w:
-                w = max_w
-            delta_w = kappa**w / total
-            # print(delta_w)
+            delta_w = kappa**((w-max_w)/T) / total
+
             if upto + delta_w >= r:
                 choice = c
-                # print(choice, upto + delta_w)
                 break
             upto += delta_w
 
-        # print(choice)
         return self._actions[choice]
 
     def _update_Q(self, s, a, s1, r):

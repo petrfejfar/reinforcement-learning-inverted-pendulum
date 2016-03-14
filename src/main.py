@@ -148,7 +148,7 @@ def main():
     # Init data structures
     twelve_rads = deg_to_rad(12)
     fifty_rads = 0.5
-    qtable = QTable([-10, 10], [(-2.4, 2.4, 8), (-1, 1, 10), (-twelve_rads, twelve_rads, 14), (-fifty_rads, fifty_rads, 14)])
+    qtable = QTable([-10, 10], [(-2.4, 2.4, 8), (-1, 1, 10), (-twelve_rads, twelve_rads, 28), (-fifty_rads, fifty_rads, 28)])
 
 
 
