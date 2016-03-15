@@ -24,6 +24,7 @@ THE SOFTWARE.
 import inspect
 import sys
 
+
 def raiseNotDefined():
     fileName = inspect.stack()[1][1]
     line = inspect.stack()[1][2]

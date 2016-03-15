@@ -34,6 +34,7 @@ from Agents import CartPoleQAgent
 
 _DIR = os.path.dirname(os.path.realpath(__file__))
 
+
 def draw_state(state, force, filename, qTable):
     plt.clf()
     plt.xlim([-2.4, 2.4])
@@ -64,6 +65,7 @@ def draw_state(state, force, filename, qTable):
 
     plt.savefig(filename)
 
+
 def main():
 
     agent = CartPoleQAgent(epsilon=0.05, gamma=1, alpha=0.1, numTraining=10000)
@@ -74,7 +76,7 @@ def main():
 
         i = 0
         while not state.failure():
-            i+=1
+            i += 1
             observation = agent.observationFunction(copy.deepcopy(state))
             action = agent.getAction(observation)
             state = state.generateSuccessor(action)
@@ -96,7 +98,6 @@ def main():
     for i in range(0, 30000, 2):
         print("%.2fsec" % (i / 100.0), "%+.4f %+.4f %+.8f %+.4f" % (state.x, state.xdot, state.theta, state.thetadot), agent.qTable[str(state)])
         print(not state.failure())
-
 
         action = agent.getPolicy(state)
         if action is None:

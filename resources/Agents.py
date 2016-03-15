@@ -21,12 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import random,util,time
-
-
-
-
-
+import random
+import util
+import time
 
 
 class Agent:
@@ -45,6 +42,7 @@ class Agent:
         """
         util.raiseNotDefined()
 
+
 class ValueEstimationAgent(Agent):
     """
       Abstract agent which assigns values to (state,action)
@@ -60,7 +58,7 @@ class ValueEstimationAgent(Agent):
       Q-Values while acting in the environment.
     """
 
-    def __init__(self, alpha=1.0, epsilon=0.05, gamma=0.8, numTraining = 10):
+    def __init__(self, alpha=1.0, epsilon=0.05, gamma=0.8, numTraining=10):
         """
         Sets options, which can be passed in via the Pacman command line using -a alpha=0.5,...
         alpha    - learning rate
@@ -108,6 +106,7 @@ class ValueEstimationAgent(Agent):
         """
         util.raiseNotDefined()
 
+
 class ReinforcementAgent(ValueEstimationAgent):
     """
       Abstract Reinforcemnt Agent: A ValueEstimationAgent
@@ -136,7 +135,7 @@ class ReinforcementAgent(ValueEstimationAgent):
     #    Read These Functions          #
     ####################################
 
-    def getLegalActions(self,state):
+    def getLegalActions(self, state):
         """
           Get the actions available for a given
           state. This is what you should use to
@@ -144,7 +143,7 @@ class ReinforcementAgent(ValueEstimationAgent):
         """
         return self.actionFn(state)
 
-    def observeTransition(self, state,action,nextState,deltaReward):
+    def observeTransition(self, state, action, nextState, deltaReward):
         """
             Called by environment to inform agent that a transition has
             been observed. This will result in a call to self.update
@@ -152,7 +151,7 @@ class ReinforcementAgent(ValueEstimationAgent):
             NOTE: Do *not* override or call this function
         """
         self.episodeRewards += deltaReward
-        self.update(state,action,nextState,deltaReward)
+        self.update(state, action, nextState, deltaReward)
 
     def startEpisode(self):
         """
@@ -182,7 +181,7 @@ class ReinforcementAgent(ValueEstimationAgent):
     def isInTesting(self):
         return not self.isInTraining()
 
-    def __init__(self, actionFn = None, numTraining=100, epsilon=0.5, alpha=0.5, gamma=1):
+    def __init__(self, actionFn=None, numTraining=100, epsilon=0.5, alpha=0.5, gamma=1):
         """
         actionFn: Function which takes a state and returns the list of legal actions
         alpha    - learning rate
@@ -190,7 +189,7 @@ class ReinforcementAgent(ValueEstimationAgent):
         gamma    - discount factor
         numTraining - number of training episodes, i.e. no learning after these many episodes
         """
-        if actionFn == None:
+        if actionFn is None:
             actionFn = lambda state: state.getLegalActions()
         self.actionFn = actionFn
         self.episodesSoFar = 0
@@ -213,7 +212,7 @@ class ReinforcementAgent(ValueEstimationAgent):
     def setDiscount(self, discount):
         self.discount = discount
 
-    def doAction(self,state,action):
+    def doAction(self, state, action):
         """
             Called by inherited class when
             an action is taken in a state

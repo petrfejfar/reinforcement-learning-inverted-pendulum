@@ -32,11 +32,22 @@ import matplotlib.pyplot as plt
 
 from Qtable import QTable
 
+
+def deg_to_rad(deg):
+    return deg * pi / 180.0
+
 _DIR = os.path.dirname(os.path.realpath(__file__))
 INF = 100000
 
+AREA_SIZE = 2.4
+SAFE_ANGLE_RAD = deg_to_rad(12)
+
+
 def simulate(force, state):
-    """Compute the next states given the force and the current states"""
+    """
+        Compute the next states given the force and the current states
+        Update the four state variables, using Euler's method.
+    """
     x = state[0]
     x_dot = state[1]
     theta = state[2]
@@ -60,8 +71,6 @@ def simulate(force, state):
 
     xacc = temp - POLEMASS_LENGTH * thetaacc * costheta / TOTAL_MASS
 
-    # Update the four state variables, using Euler's method.
-
     return (x + STEP * x_dot,
             x_dot + STEP * xacc,
             theta + STEP * theta_dot,
@@ -71,12 +80,12 @@ def simulate(force, state):
 def system_safe(state):
     """Is the system in stable?"""
     theta = state[2] - (2*pi) * floor((state[2] + pi) / (2*pi))
-    return abs(state[0]) < 2.4 and abs(theta) < 0.20943951
+    return abs(state[0]) < AREA_SIZE and abs(theta) < SAFE_ANGLE_RAD
 
 
 def draw_state(state, force, filename, qTable):
     plt.clf()
-    plt.xlim([-2.4, 2.4])
+    plt.xlim([-AREA_SIZE, AREA_SIZE])
     plt.ylim([-1, 3.8])
 
     plt.title('state: %+.2f %+.2f %+.2f %+.2f' % state + " %f" % r_theta(state))
@@ -104,6 +113,7 @@ def draw_state(state, force, filename, qTable):
 
     plt.savefig(filename)
 
+
 def condition_based_action(state):
     force = 0
 
@@ -118,8 +128,6 @@ def condition_based_action(state):
 
     return force
 
-def deg_to_rad(deg):
-    return deg * pi / 180.0
 
 def r_time(state):
     """Return 2 (reward for two milliseconds in safe state) or 0"""
@@ -128,46 +136,40 @@ def r_time(state):
     else:
         return 0
 
+
 def r_safe(state):
     """Return 0 if safe, -1 otherwise"""
     if system_safe(state):
-        return 0
+        return 1
     else:
         return -1
 
+
 def r_theta(state):
     """Return reward based on pole angle"""
-    if abs(state[0]) >= 2.4:
+    if abs(state[0]) >= AREA_SIZE:
         return -pi ** 2
-    # return  - (deg_to_rad(state[2]) ** 2)
-    return  - (state[2]) ** 2
+
+    return - (state[2]) ** 2
+
 
 def main():
     """Main procedure"""
 
     # Init data structures
-    twelve_rads = deg_to_rad(12)
-    fifty_rads = 0.5
-    qtable = QTable([-10, 10], [(-2.4, 2.4, 8), (-1, 1, 10), (-twelve_rads, twelve_rads, 28), (-fifty_rads, fifty_rads, 28)])
-
-    # twelve_rads = deg_to_rad(12)
+    # NOTE: previous result:
     # fifty_rads = deg_to_rad(50)
     # qtable = QTable([-10, 10], [(-2.4, 2.4, 4), (-2, 2, 30), (-twelve_rads, twelve_rads, 96), (-fifty_rads, fifty_rads, 25)]) # inf - nahoda
-
-
-
-    # fifty_rads = deg_to_rad(50)
     # qtable = QTable([-10, 10, -30, 30], [(-2.4, 2.4, 16), (-2, 2, 20), (-twelve_rads, twelve_rads, 48), (-fifty_rads, fifty_rads, 12)]) # 48s - nahoda
-
-
+    qtable = QTable([-10, 10], [(-AREA_SIZE, AREA_SIZE, 8), (-1, 1, 10), (-SAFE_ANGLE_RAD, SAFE_ANGLE_RAD, 28), (-0.5, 0.5, 28)])
 
     # Reinforcement learning
-    # qtable.learn(simulate, r_theta, system_safe)
-    # qtable.learn(simulate, r_safe, system_safe)
-    qtable.learn(simulate, r_time, system_safe)
+    iterations = 6000
+    max_state_transitions = 30000
+    qtable.learn(simulate, r_safe, system_safe, iterations, max_state_transitions)
+
     qtable.draw("stav.png")
 
-    # return
     # Run inverted pendulum system simulation
     state = (0.0, 0.0, 0.0, 0.0)
 
@@ -183,7 +185,6 @@ def main():
         print("%.2fsec" % (i / 100.0), state, qtable.get_q_vals(state))
         print(system_safe(state))
 
-
         if not system_safe(state):
             print("FAIL")
             break
@@ -191,7 +192,7 @@ def main():
         force = qtable.get_best_action(state)
 
         state = simulate(force, state)
-        draw_state(state, force, os.path.join(_DIR, "./../output/state_%03dms.png" % (i/2)), qtable)
+        draw_state(state, force, os.path.join(_DIR, "./../output/state_%06dms.png" % (i/2)), qtable)
 
     # Generate video
     if _platform == "linux":                                         # GNU/Linux
@@ -199,6 +200,7 @@ def main():
     elif _platform == "darwin":                                           # OS X
         pass
     elif _platform == "win32" or _platform == "cygwin":             # Windows...
+        subprocess.call(os.path.join(_DIR, "./../make_video.bat"), shell=True)
         pass
 
 if __name__ == '__main__':
