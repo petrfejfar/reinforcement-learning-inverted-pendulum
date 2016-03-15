@@ -24,94 +24,133 @@ THE SOFTWARE.
 import itertools
 import random
 
-from math import cos, sin, floor, pi, e
+from math import e
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 class QTable:
-    pit = ("-100", "-100", "-100", "-100")
+    """Represent and learn Q table"""
+
+    pit = ("-100", "-100", "-100", "-100")                      # terminal state
 
     def __init__(self, actions, states):
         """
             actions [-10, 10]
             states [(min, max, inteval_counts),...]
         """
-        self._learning_rate = 0.67
-        self._gamma = 0.999
 
+        # Assign dummy values
+        self._model = None
+        self._learning_rate = 0
+        self._gamma = 0
+
+        # Save data
         self._actions = list(range(len(actions)))
-        print(self._actions)
         self._action_map = actions
         self._state_descriptions = states
 
         state_len = len(self._state_descriptions)
         values = []
 
+        # Discretize state coordinates
         for i in range(state_len):
-            delta = (self._state_descriptions[i][1] - self._state_descriptions[i][0]) / float(self._state_descriptions[i][2])
+            # Coordinate description
+            val_min = self._state_descriptions[i][0]
+            val_max = self._state_descriptions[i][1]
+            val_pieces = self._state_descriptions[i][2]
+
+            delta = (val_max - val_min) / float(val_pieces)
+
             values.append([])
+
+            # Generate all possible discrete values
             for x in range(self._state_descriptions[i][2] + 1):
                 val = format(self._state_descriptions[i][0] + x * delta, '.6f')
                 values[i].append(val)
-            print(values[i])
 
+        # Generate all possible states
         all_states = list(itertools.product(*values))
-        all_states.append(("-100", "-100", "-100", "-100"))
+        all_states.append(self.pit)                         # add terminal state
 
+        # Initialize QTable
         self._table = dict((el, [0] * len(actions)) for el in all_states)
 
     def get_q_vals(self, s):
+        """Return Q values for all actions"""
+
         state_norm = self._normalize_state(s)
         return self._table[state_norm]
 
     def _get_best_action_index(self, s):
+        """Return best action index based on Q value"""
+
         state_norm = self._normalize_state(s)
         return self._table[state_norm].index(max(self._table[state_norm]))
 
     def get_best_action(self, s):
+        """Return best action"""
+
         return self._action_map[self._get_best_action_index(s)]
 
-    def learn(self, model, iterations, max_state_transitions, simulation_timespan):
+    def learn(self, model, iterations, max_state_transitions, \
+              simulation_timespan, learning_rate=0.1, discount_factor=1):
+        """Learn Q table"""
 
+        self._model = model
+        self._learning_rate = learning_rate
+        self._gamma = discount_factor
+
+        success = False
+
+        # For each iterarion
         for i in range(1, iterations+1):
+            if success:
+                break
+
             model.reset()
             state_norm = self._normalize_state(model.get_state())
 
             transition = 0
-            success = False
 
             updates = []
 
-            while True:
+            # Change states forever
+            while not success:
                 transition += 1
 
                 a = self._get_random_action(model.get_state())
-
                 model.simulate(self._action_map[a], simulation_timespan)
+
                 r = model.reward()
                 next_s_norm = self._normalize_state(model.get_state())
 
                 updates.append((state_norm, a, next_s_norm, r))
 
-                if not model.system_safe():
+                # Stop on failure
+                if not model.is_system_safe():
                     break
 
+                # Stop on success
                 if transition >= max_state_transitions:
                     success = True
                     break
 
                 state_norm = self._normalize_state(model.get_state())
 
-            print(updates[-1])
             for state_norm, a, next_s_norm, r in reversed(updates):
-                self._update_Q(state_norm, a, next_s_norm, r)
+                self._update_q(state_norm, a, next_s_norm, r)
 
-            print("Iteration #%05d %s after %d steps." % (i, "success" if success else "failed", transition))
-            if success:
-                break
+            print("Iteration #%05d %s after %d steps. \t" % \
+                    (i, "success" if success else "failed", transition), end="")
+
+            if not success:
+                print(updates[-1], end="")
+
+            print("")
 
     def _get_random_action(self, s):
+        """Boltzmann random action selection"""
+
         state_norm = self._normalize_state(s)
 
         T = 4
@@ -136,68 +175,93 @@ class QTable:
 
         return self._actions[choice]
 
-    def _update_Q(self, s, a, s1, r):
-        sample = r + self._gamma * max(self._table[s1])
+    def _update_q(self, s, a, s1, r):
+        """Update Q value"""
 
-        self._table[s][a] = self._table[s][a] + self._learning_rate * (sample - self._table[s][a])
+        sample = r + self._gamma * max(self._table[s1])
+        self._table[s][a] += self._learning_rate * (sample - self._table[s][a])
 
     def _normalize_state(self, s):
-        if not self.system_safe2(s):
+        """Normalize state"""
+
+        if not self._model.is_state_safe(s):
             return ("-100", "-100", "-100", "-100")
 
         state_len = len(self._state_descriptions)
-
         state_norm = []
+
         for i in range(state_len):
-            delta = (self._state_descriptions[i][1] - self._state_descriptions[i][0]) / float(self._state_descriptions[i][2])
-            n = round((s[i] - self._state_descriptions[i][0]) / delta)
+            val_min = self._state_descriptions[i][0]
+            val_max = self._state_descriptions[i][1]
+            val_pieces = self._state_descriptions[i][2]
 
-            val = self._state_descriptions[i][0] + n * delta
+            delta = (val_max - val_min) / float(val_pieces)
+            n = round((s[i] - val_min) / delta)
 
-            if val > self._state_descriptions[i][1]:
-                val = self._state_descriptions[i][1]
-            elif val < self._state_descriptions[i][0]:
-                val = self._state_descriptions[i][0]
+            val = val_min + n * delta
+
+            if val > val_max:
+                val = val_max
+            elif val < val_min:
+                val = val_min
 
             val = format(val, '.6f')
             state_norm.append(val)
 
         return tuple(state_norm)
 
-    def system_safe2(self, state):
-        """Is the system in stable?"""
-        theta = state[2] - (2*pi) * floor((state[2] + pi) / (2*pi))
-        return abs(state[0]) < 2.4 and abs(theta) < 0.20943951
-
     def get_tableindexes(self, s):
-        result = [0, 0, 0,  0]
+        """Return table indexes"""
+
+        result = [0, 0, 0, 0]
+
         for i in range(len(s)):
-            delta = (self._state_descriptions[i][1] - self._state_descriptions[i][0]) / float(self._state_descriptions[i][2])
+            val_min = self._state_descriptions[i][0]
+            val_max = self._state_descriptions[i][1]
+            val_pieces = self._state_descriptions[i][2]
+
+            delta = (val_max - val_min) / float(val_pieces)
             value = float(s[i])
-            value = min(value, self._state_descriptions[i][1])
-            n = round((value - self._state_descriptions[i][0]) / delta)
+            value = min(value, val_max)
+            n = round((value - val_min) / delta)
             result[i] = n
 
         return tuple(result)
 
     def set_axis(self, ax, x_index, y_index):
-        delta = (self._state_descriptions[x_index][1] - self._state_descriptions[x_index][0]) / float(self._state_descriptions[x_index][2])
-        ticks = [self._state_descriptions[x_index][0]]
-        for i in range(self._state_descriptions[x_index][2]+1):
-            ticks.append(self._state_descriptions[x_index][0] + i*delta)
+        """Set axis"""
+
+        # X axix
+        x_val_min = self._state_descriptions[x_index][0]
+        x_val_max = self._state_descriptions[x_index][1]
+        x_val_pieces = self._state_descriptions[x_index][2]
+
+        delta = (x_val_max - x_val_min) / float(x_val_pieces)
+        ticks = [x_val_min]
+
+        for i in range(x_val_pieces + 1):
+            ticks.append(x_val_min + i * delta)
 
         ax.set_xticks(ticks)
 
-        delta = (self._state_descriptions[y_index][1] - self._state_descriptions[y_index][0]) / float(self._state_descriptions[y_index][2])
-        ticks = [self._state_descriptions[y_index][0]]
-        for i in range(self._state_descriptions[y_index][2]+1):
-            ticks.append(self._state_descriptions[y_index][0] + i*delta)
+        # Y axix
+        y_val_min = self._state_descriptions[y_index][0]
+        y_val_max = self._state_descriptions[y_index][1]
+        y_val_pieces = self._state_descriptions[y_index][2]
+
+        delta = (y_val_max - y_val_min) / float(y_val_pieces)
+        ticks = [y_val_min]
+
+        for i in range(y_val_pieces + 1):
+            ticks.append(y_val_min + i * delta)
 
         ax.set_yticks(ticks)
 
         ax.grid(which='major', alpha=0.5)
 
     def draw(self, filename, simple=False):
+        """Draw Q table"""
+
         x_index = 0
         y_index = 2
 
@@ -208,17 +272,27 @@ class QTable:
             x_sub_size = 1
             y_sub_size = 1
         else:
-            y_sub_size = self._state_descriptions[y_sub_index][2]+1
-            x_sub_size = self._state_descriptions[x_sub_index][2]+1
+            y_sub_size = self._state_descriptions[y_sub_index][2] + 1
+            x_sub_size = self._state_descriptions[x_sub_index][2] + 1
 
-        x_size = (self._state_descriptions[x_index][2]+1) * x_sub_size
-        y_size = (self._state_descriptions[y_index][2]+1) * y_sub_size
+
+        x_val_min = self._state_descriptions[x_index][0]
+        x_val_max = self._state_descriptions[x_index][1]
+        x_val_pieces = self._state_descriptions[x_index][2]
+
+        y_val_min = self._state_descriptions[y_index][0]
+        y_val_max = self._state_descriptions[y_index][1]
+        y_val_pieces = self._state_descriptions[y_index][2]
+
+
+        x_size = (x_val_pieces + 1) * x_sub_size
+        y_size = (y_val_pieces + 1) * y_sub_size
         data = np.zeros((x_size, y_size))
 
         for key, value in self._table.items():
             i = self.get_tableindexes(key)
 
-            if(any(x < 0 for x in i)):
+            if any(x < 0 for x in i):
                 print("skipping: ", i)
                 continue
 
@@ -228,23 +302,23 @@ class QTable:
             else:
                 x = i[x_sub_index] + (i[x_index] * x_sub_size)
                 y = i[y_sub_index] + (i[y_index] * y_sub_size)
-            data[x, y] = (value[0]-value[1])
+            data[x, y] = (value[0] - value[1])
 
         plt.clf()
         ax = plt.figure().add_subplot(1, 1, 1)
         self.set_axis(ax, x_index, y_index)
         data = data.transpose()
 
-        delta_x = (self._state_descriptions[x_index][1] - self._state_descriptions[x_index][0]) / float(self._state_descriptions[x_index][2])
-        delta_y = (self._state_descriptions[y_index][1] - self._state_descriptions[y_index][0]) / float(self._state_descriptions[y_index][2])
-        plt.imshow(data,
-                   extent=(
-                    self._state_descriptions[x_index][0],
-                    self._state_descriptions[x_index][1]+delta_x,
-                    self._state_descriptions[y_index][0],
-                    self._state_descriptions[y_index][1]+delta_y
-                   ),
-                   interpolation="nearest",
+        delta_x = (x_val_max - x_val_min) / float(x_val_pieces)
+        delta_y = (y_val_max - y_val_min) / float(y_val_pieces)
+        plt.imshow(data, \
+                   extent=( \
+                    x_val_min, \
+                    x_val_max + delta_x, \
+                    y_val_min, \
+                    y_val_max + delta_y \
+                   ), \
+                   interpolation="nearest", \
                    aspect="auto")
         plt.xlabel("x - " + str(x_index) + "x_sub" + str(x_sub_index))
         plt.ylabel("y - " + str(y_index) + "y_sub" + str(y_sub_index))

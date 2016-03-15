@@ -24,74 +24,93 @@ THE SOFTWARE.
 import glob
 import os
 import subprocess
+import sys
 
 from sys import platform as _platform
 from math import pi
 
-from Qtable import QTable
+from qtable import QTable
 from model import Model
 
 _DIR = os.path.dirname(os.path.realpath(__file__))
-INF = 100000
 
-# model paramaters
-AREA_SIZE = 2.4
-SAFE_ANGLE_RAD = 12 * pi / 180.0  # 12 degree
-SIMULATION_TIME_DELTA = 0.02
+# Model paramaters
+AREA_SIZE = 2.4                                                      # in meters
+SAFE_ANGLE_RAD = 12 * pi / 180.0                                    # 12 degrees
 
-# learning parameters
-LEARNING_ITERATION = 600
+# Learning parameters
+LEARNING_RATE = 0.1
+DISCOUNT_FACTOR = 1
+LEARNING_ITERATION = 1500
 MAX_STATE_TRANSITIONS = 30000
 
+# Simulation parameters
+SIMULATION_TIME = 2 * 60                                            # in seconds
+SIMULATION_TIME_DELTA = 0.02                                        # in seconds
 
 def delete_temp_files():
-    # Clear after previous run
-    for f in glob.glob(os.path.join(_DIR, "./../output/state_*ms.png")):
-        try:
-            if os.path.isfile(f):
-                os.unlink(f)
-        except Exception as e:
-            print(e)
+    """Clear simulation images after previous run"""
 
+    for img in glob.glob(os.path.join(_DIR, "./../output/state_*ms.png")):
+        try:
+            if os.path.isfile(img):
+                os.unlink(img)
+        except OSError as exception:
+            print(exception)
 
 def main():
     """Main procedure"""
 
     # Init data structures
-    # NOTE: previous result:
-    # fifty_rads = deg_to_rad(50)
-    # qtable = QTable([-10, 10], [(-2.4, 2.4, 4), (-2, 2, 30), (-twelve_rads, twelve_rads, 96), (-fifty_rads, fifty_rads, 25)]) # inf - nahoda
-    # qtable = QTable([-10, 10, -30, 30], [(-2.4, 2.4, 16), (-2, 2, 20), (-twelve_rads, twelve_rads, 48), (-fifty_rads, fifty_rads, 12)]) # 48s - nahoda
-    qtable = QTable([-10, 10], [(-AREA_SIZE, AREA_SIZE, 8), (-1, 1, 10), (-SAFE_ANGLE_RAD, SAFE_ANGLE_RAD, 28), (-0.5, 0.5, 28)])
+    qtable = QTable([-10, 10], \
+                    [ \
+                        (-AREA_SIZE, AREA_SIZE, 8), \
+                        (-1, 1, 10), \
+                        (-SAFE_ANGLE_RAD, SAFE_ANGLE_RAD, 28), (-0.5, 0.5, 28) \
+                    ])
 
-    # inverted pendulum model
+    # Inverted pendulum model
     initial_state = (0.0, 0.0, 0.0, 0.0)
     model = Model(initial_state, AREA_SIZE, SAFE_ANGLE_RAD)
 
     # Reinforcement learning
-    qtable.learn(model, LEARNING_ITERATION, MAX_STATE_TRANSITIONS, SIMULATION_TIME_DELTA)
+    qtable.learn(model,
+                 LEARNING_ITERATION, \
+                 MAX_STATE_TRANSITIONS, \
+                 SIMULATION_TIME_DELTA, \
+                 LEARNING_RATE, \
+                 DISCOUNT_FACTOR)
 
-    qtable.draw("qtable.png")
+    # Visualize QTable
+    qtable.draw(os.path.join(_DIR, "./../output/qtable.png"))
 
+    # Clear temporary files
     delete_temp_files()
 
     # Run inverted pendulum system simulation
     model.reset()
 
-    for i in range(0, 30001, 2):
-        print("%.2fsec" % (i / 100.0), model.get_state(), qtable.get_q_vals(model.get_state()))
-        print(model.system_safe())
+    for i in range(0, round(SIMULATION_TIME / SIMULATION_TIME_DELTA) + 1):
+        print("%.2fsec" % (i * SIMULATION_TIME_DELTA), \
+              model.get_state(), \
+              qtable.get_q_vals(model.get_state()))
+        print(model.is_system_safe())
 
-        if not model.system_safe():
+        if not model.is_system_safe():
             print("FAIL")
             break
 
         force = qtable.get_best_action(model.get_state())
         model.simulate(force, SIMULATION_TIME_DELTA)
 
-        model.draw_state(force, os.path.join(_DIR, "./../output/state_%06dms.png" % (i/2)), qtable)
+        model.draw_state(force, os.path.join(_DIR, \
+                                             "./../output/state_%06dms.png" % \
+                                             (i)), qtable)
 
     # Generate video
+    print("\nGenerating video...", end="")
+    sys.stdout.flush()
+
     if _platform == "linux":                                         # GNU/Linux
         subprocess.call(os.path.join(_DIR, "./../make_video.sh"), shell=True)
     elif _platform == "darwin":                                           # OS X
@@ -102,6 +121,8 @@ def main():
         freq = 2500
         dur = 1000
         winsound.Beep(freq, dur)
+
+    print("DONE")
 
 if __name__ == '__main__':
     main()
