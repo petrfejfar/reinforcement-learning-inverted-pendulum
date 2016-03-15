@@ -25,132 +25,33 @@ import glob
 import os
 import subprocess
 
-from math import cos, sin, floor, pi
 from sys import platform as _platform
-
-import matplotlib.pyplot as plt
+from math import pi
 
 from Qtable import QTable
-
-
-def deg_to_rad(deg):
-    return deg * pi / 180.0
+from model import Model
 
 _DIR = os.path.dirname(os.path.realpath(__file__))
 INF = 100000
 
+# model paramaters
 AREA_SIZE = 2.4
-SAFE_ANGLE_RAD = deg_to_rad(12)
+SAFE_ANGLE_RAD = 12 * pi / 180.0  # 12 degree
+SIMULATION_TIME_DELTA = 0.02
+
+# learning parameters
+LEARNING_ITERATION = 600
+MAX_STATE_TRANSITIONS = 30000
 
 
-def simulate(force, state):
-    """
-        Compute the next states given the force and the current states
-        Update the four state variables, using Euler's method.
-    """
-    x = state[0]
-    x_dot = state[1]
-    theta = state[2]
-    theta_dot = state[3]
-
-    GRAVITY = 9.8
-    MASSCART = 1.0
-    MASSPOLE = 0.1
-    TOTAL_MASS = MASSPOLE + MASSCART
-    LENGTH = 0.5
-    POLEMASS_LENGTH = MASSPOLE * LENGTH
-    STEP = 0.02
-    FOURTHIRDS = 4.0 / 3
-
-    costheta = cos(theta)
-    sintheta = sin(theta)
-
-    temp = (force + POLEMASS_LENGTH * theta_dot * theta_dot * sintheta) / TOTAL_MASS
-
-    thetaacc = (GRAVITY * sintheta - costheta * temp) / (LENGTH * (FOURTHIRDS - MASSPOLE * costheta * costheta / TOTAL_MASS))
-
-    xacc = temp - POLEMASS_LENGTH * thetaacc * costheta / TOTAL_MASS
-
-    return (x + STEP * x_dot,
-            x_dot + STEP * xacc,
-            theta + STEP * theta_dot,
-            theta_dot + STEP * thetaacc)
-
-
-def system_safe(state):
-    """Is the system in stable?"""
-    theta = state[2] - (2*pi) * floor((state[2] + pi) / (2*pi))
-    return abs(state[0]) < AREA_SIZE and abs(theta) < SAFE_ANGLE_RAD
-
-
-def draw_state(state, force, filename, qTable):
-    plt.clf()
-    plt.xlim([-AREA_SIZE, AREA_SIZE])
-    plt.ylim([-1, 3.8])
-
-    plt.title('state: %+.2f %+.2f %+.2f %+.2f' % state + " %f" % r_theta(state))
-    if system_safe(state):
-        color = "green"
-    else:
-        color = "red"
-
-    qVals = qTable.get_q_vals(state)
-    plt.annotate("%09.2f" % qVals[0], (-2, 3), color="red" if force > 0 else "green")
-    plt.annotate("%09.2f" % qVals[1], (1.5, 3), color="green" if force > 0 else "red")
-    # draw state
-    plt.plot([state[0] + 0, state[0] + sin(state[2])], [0, cos(state[2])], color=color, aa=True)
-
-    # draw 12 degree safezone
-    twelve_rads = 0.20943951
-    plt.plot([state[0] + 0, state[0] + sin(twelve_rads)], [0, cos(twelve_rads)], color="grey", aa=True)
-    plt.plot([state[0] + 0, state[0] + sin(-twelve_rads)], [0, cos(-twelve_rads)], color="grey", aa=True)
-
-    # draw force
-    if force > 0:
-        plt.plot([0, 1], [0, 0], color="black", aa=True)
-    else:
-        plt.plot([0, -1], [0, 0], color="black", aa=True)
-
-    plt.savefig(filename)
-
-
-def condition_based_action(state):
-    force = 0
-
-    if state[2] > 0:
-        force = 10
-        if state[2] < 0.2 and state[3] < -0.5:
-            force = -10
-    else:
-        force = -10
-        if state[2] > -0.2 and state[3] > 0.5:
-            force = 10
-
-    return force
-
-
-def r_time(state):
-    """Return 2 (reward for two milliseconds in safe state) or 0"""
-    if system_safe(state):
-        return 1
-    else:
-        return 0
-
-
-def r_safe(state):
-    """Return 0 if safe, -1 otherwise"""
-    if system_safe(state):
-        return 1
-    else:
-        return -1
-
-
-def r_theta(state):
-    """Return reward based on pole angle"""
-    if abs(state[0]) >= AREA_SIZE:
-        return -pi ** 2
-
-    return - (state[2]) ** 2
+def delete_temp_files():
+    # Clear after previous run
+    for f in glob.glob(os.path.join(_DIR, "./../output/state_*ms.png")):
+        try:
+            if os.path.isfile(f):
+                os.unlink(f)
+        except Exception as e:
+            print(e)
 
 
 def main():
@@ -163,36 +64,32 @@ def main():
     # qtable = QTable([-10, 10, -30, 30], [(-2.4, 2.4, 16), (-2, 2, 20), (-twelve_rads, twelve_rads, 48), (-fifty_rads, fifty_rads, 12)]) # 48s - nahoda
     qtable = QTable([-10, 10], [(-AREA_SIZE, AREA_SIZE, 8), (-1, 1, 10), (-SAFE_ANGLE_RAD, SAFE_ANGLE_RAD, 28), (-0.5, 0.5, 28)])
 
-    # Reinforcement learning
-    iterations = 6000
-    max_state_transitions = 30000
-    qtable.learn(simulate, r_safe, system_safe, iterations, max_state_transitions)
+    # inverted pendulum model
+    initial_state = (0.0, 0.0, 0.0, 0.0)
+    model = Model(initial_state, AREA_SIZE, SAFE_ANGLE_RAD)
 
-    qtable.draw("stav.png")
+    # Reinforcement learning
+    qtable.learn(model, LEARNING_ITERATION, MAX_STATE_TRANSITIONS, SIMULATION_TIME_DELTA)
+
+    qtable.draw("qtable.png")
+
+    delete_temp_files()
 
     # Run inverted pendulum system simulation
-    state = (0.0, 0.0, 0.0, 0.0)
-
-    # Clear after previous run
-    for f in glob.glob(os.path.join(_DIR, "./../output/state_*ms.png")):
-        try:
-            if os.path.isfile(f):
-                os.unlink(f)
-        except Exception as e:
-            print(e)
+    model.reset()
 
     for i in range(0, 30001, 2):
-        print("%.2fsec" % (i / 100.0), state, qtable.get_q_vals(state))
-        print(system_safe(state))
+        print("%.2fsec" % (i / 100.0), model.get_state(), qtable.get_q_vals(model.get_state()))
+        print(model.system_safe())
 
-        if not system_safe(state):
+        if not model.system_safe():
             print("FAIL")
             break
 
-        force = qtable.get_best_action(state)
+        force = qtable.get_best_action(model.get_state())
+        model.simulate(force, SIMULATION_TIME_DELTA)
 
-        state = simulate(force, state)
-        draw_state(state, force, os.path.join(_DIR, "./../output/state_%06dms.png" % (i/2)), qtable)
+        model.draw_state(force, os.path.join(_DIR, "./../output/state_%06dms.png" % (i/2)), qtable)
 
     # Generate video
     if _platform == "linux":                                         # GNU/Linux
@@ -201,7 +98,10 @@ def main():
         pass
     elif _platform == "win32" or _platform == "cygwin":             # Windows...
         subprocess.call(os.path.join(_DIR, "./../make_video.bat"), shell=True)
-        pass
+        import winsound
+        freq = 2500
+        dur = 1000
+        winsound.Beep(freq, dur)
 
 if __name__ == '__main__':
     main()

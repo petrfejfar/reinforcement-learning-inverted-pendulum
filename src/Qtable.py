@@ -72,11 +72,11 @@ class QTable:
     def get_best_action(self, s):
         return self._action_map[self._get_best_action_index(s)]
 
-    def learn(self, simulate_f, reward_f, is_safe, iterations, max_state_transitions):
+    def learn(self, model, iterations, max_state_transitions, simulation_timespan):
 
         for i in range(1, iterations+1):
-            state = (0.0, 0.0, 0.0, 0.0)
-            state_norm = self._normalize_state(state)
+            model.reset()
+            state_norm = self._normalize_state(model.get_state())
 
             transition = 0
             success = False
@@ -86,30 +86,26 @@ class QTable:
             while True:
                 transition += 1
 
-                a = self._get_random_action(state)
+                a = self._get_random_action(model.get_state())
 
-                next_s = simulate_f(self._action_map[a], state)
-                r = reward_f(next_s)
-                next_s_norm = self._normalize_state(next_s)
+                model.simulate(self._action_map[a], simulation_timespan)
+                r = model.reward()
+                next_s_norm = self._normalize_state(model.get_state())
 
                 updates.append((state_norm, a, next_s_norm, r))
 
-                if not is_safe(next_s):
+                if not model.system_safe():
                     break
 
                 if transition >= max_state_transitions:
                     success = True
                     break
 
-                state = next_s
-                state_norm = self._normalize_state(state)
+                state_norm = self._normalize_state(model.get_state())
 
             print(updates[-1])
             for state_norm, a, next_s_norm, r in reversed(updates):
                 self._update_Q(state_norm, a, next_s_norm, r)
-
-            if not is_safe(next_s):
-                print("Last state: ", state, self._table[state_norm])
 
             print("Iteration #%05d %s after %d steps." % (i, "success" if success else "failed", transition))
             if success:
