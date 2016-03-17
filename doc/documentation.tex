@@ -29,6 +29,8 @@
 \newcommand\mynobreakpar{\par\nobreak\@afterheading} 
 \makeatother
 
+\usepackage{gensymb}
+
 \begin{document}
 
 %----------------------------------------------------------------------------------------
@@ -140,7 +142,7 @@ Where\mynobreakpar
 	\item[] $m_c = 10 kg$, mass of the cart
 	\item[] $m = 0.1 kg$, mass of the pole
 	\item[] $l = 0.5 m$ , half of the pole length
-	\item[] $F(t) = +10 N or -10 N$, force applied to cart’s mass center at time t.
+	\item[] $F(t) = +10 N$ or $-10 N$, force applied to cart’s mass center at time t.
 
 \end{itemize}
 
@@ -173,8 +175,52 @@ Your report has to clarify your approach and results by covering the following i
 %	ANALYSIS
 %----------------------------------------------------------------------------------------
 
+\newpage
+
 \section{Analysis}
 
+\subsection{State discretization}
+
+We have constricted continuous variables with reasonable values and then divided uniformly.
+
+\begin{enumerate}
+
+	\item position of the cart($x$) --- constraints $\langle-2.4, 2.4\rangle$, $8$ intervals
+	\item angle of the pole ($\theta$) --- constraints $\langle-12\degree, 12\degree\rangle$, $28$ intervals
+	\item cart velocity on the rail ($\dot x$) --- constraints $\langle-1, 1\rangle$, $10$ intervals
+	\item speed of pole rotation ($\dot \theta$) --- constraints $\langle-1, 1\rangle$, $28$ intervals
+
+\end{enumerate}
+
+
+\subsection{Reward function}
+
+Our reward function is simple. It returns $1$ if the state is safe, $0$ otherwise.
+
+
+\subsection{Q function}
+
+$Q^*(s,a)$ is the expected pay-off when taking the action $a$ at the state $s$ and following the optimal policy $\pi^*$.
+
+$$
+Q(s,a) = Q(s,a) + \alpha[r^a_{ss'} + \gamma \max_{a}Q^*(s',a') - Q(s,a)]
+$$
+
+\noindent
+,where $s, s'$ are states, $a,a'$ are actions, $\alpha$ is learning rate and $\gamma$ is a discount factor and $r^a_{ss'}$ is a reward.
+
+\subsection{Learning algorithm}
+
+TODO Petr Fejfar
+
+\subsection{Random action selection}
+
+TODO Petr Fejfar
+
+
+\subsection{Results}
+
+TODO Petr Fejfar
 
 %----------------------------------------------------------------------------------------
 %	CONCLUSION
@@ -182,7 +228,7 @@ Your report has to clarify your approach and results by covering the following i
 
 \section{Conclusion}
 
-
+TODO Petr Fejfar
 
 
 % autorův rozbor dosažených výsledků, vyzdvihnutí kladů a přínosu prezentovaného řešení,  kritika nedostatků ap.
