@@ -41,11 +41,11 @@ SAFE_ANGLE_RAD = 12 * pi / 180.0                                    # 12 degrees
 # Learning parameters
 LEARNING_RATE = 0.1
 DISCOUNT_FACTOR = 1
-LEARNING_ITERATION = 1500
+LEARNING_ITERATION = 500
 MAX_STATE_TRANSITIONS = 30000
 
 # Simulation parameters
-SIMULATION_TIME = 2 * 60                                            # in seconds
+SIMULATION_TIME = 60 * 60                                           # in seconds
 SIMULATION_TIME_DELTA = 0.02                                        # in seconds
 
 def delete_temp_files():
@@ -66,7 +66,7 @@ def main():
                     [ \
                         (-AREA_SIZE, AREA_SIZE, 8), \
                         (-1, 1, 10), \
-                        (-SAFE_ANGLE_RAD, SAFE_ANGLE_RAD, 28), (-0.5, 0.5, 28) \
+                        (-SAFE_ANGLE_RAD, SAFE_ANGLE_RAD, 28), (-1, 1, 28) \
                     ])
 
     # Inverted pendulum model

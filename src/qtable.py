@@ -132,7 +132,7 @@ class QTable:
 
                 # Stop on success
                 if transition >= max_state_transitions:
-                    success = True
+                    # success = True
                     break
 
                 state_norm = self._normalize_state(model.get_state())
@@ -153,7 +153,7 @@ class QTable:
 
         state_norm = self._normalize_state(s)
 
-        T = 4
+        T = 3
         kappa = e
         total = 0
 

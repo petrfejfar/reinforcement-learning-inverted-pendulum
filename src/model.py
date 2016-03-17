@@ -29,7 +29,7 @@ class Model:
 
     gravity = 9.8
 
-    def __init__(self, initial_state, area_size, safe_angle_rad, masscart=1.0, \
+    def __init__(self, initial_state, area_size, safe_angle_rad, masscart=10, \
                  masspole=0.1, polelength=1):
         """Initialize model"""
 
