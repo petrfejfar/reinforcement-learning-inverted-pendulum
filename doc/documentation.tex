@@ -211,16 +211,46 @@ $$
 
 \subsection{Learning algorithm}
 
-TODO Petr Fejfar
+As learning algorithm we are using stochastic Q-learning. Due to state discretization state transition is not deterministic. Although system state transition function is deterministic, transition from discrete system state can end in multiple states. 
+
+
+We run 6000 simulation and we stop simulation when it reach $30000^{th}$ state. These parameters are set to target achieve 2 minutes long run, which is consireded to stable run.
+
+$\gamma$ we set to $0.1$. State $a_0$ is move with cart by force $-10N$ and $a_1$ is move with cart by force $10N$.
 
 \subsection{Random action selection}
 
-TODO Petr Fejfar
+For exploring new states we are using \href{distriburion https://en.wikipedia.org/wiki/Boltzmann\_distribution}{Boltzmann distribution}
 
+$$
+p_i = \frac{e^{-\epsilon_i/kT}}
+                        {\sum\limits_{i=0}^N e^{-\epsilon_i/kT}}
+$$
+
+\noindent
+,where $p_i$ is probability that action $a_i$ is chosen. $\epsilon_i$ is energy of state which we set to actual $Q(s, a_i)$, $k$ is Boltzmann constant and $T$ is temperature of system which we set empirically. Boltzmann constant $k$ is not relevant to our problem so we set is to $1$.
+
+\subsection{Visualization}
+
+Debugging of the algorithm is very challenging process, so we created visualization (Figure 2). State $s$ has 4 dimension, but resolution isn't high. We chose to show 2 dimension per axis. We split graph by grid which represent states of the first dimension. Inside each grid splitted cell we show whole second dimension for current state in first dimension (Figure 3). Same process we did for second axis. Color represents difference $Q(s, a_0) - Q(s, a_1)$.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=1.0\textwidth]{visualization.png}
+\caption{Visualization of state of $Q(s, a)$, where $x$ axis is position/speed and $y$ axis is angle/angle speed.}
+\label{img:visualization}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.2\textwidth]{visualization-zoom.png}
+\caption{Detail of cell in visualization of state of $Q(s, a)$, where $x$ axis is speed and $y$ axis is angle speed.}
+\label{img:visualization}
+\end{figure}
 
 \subsection{Results}
 
-TODO Petr Fejfar
+Algorithm can achieve 2 minutes run. After 2 minutes we stop the simulation. We attach video with 2 minutes run achieved by our algorithm to this document.
 
 %----------------------------------------------------------------------------------------
 %	CONCLUSION
@@ -228,7 +258,12 @@ TODO Petr Fejfar
 
 \section{Conclusion}
 
-TODO Petr Fejfar
+From visualization we learned that Q-learning algorithm fill more states near state $(0, 0, 0, 0)$. This is resulting in pendulum crash after leaving neighbourhood of state $(0, 0, 0, 0)$. Algorithm was very stable on states where was trained properly. 
+
+
+\section{Future work}
+
+We want to face problem of not learning all states. We suggest to use backtracking of all possible state during state exploration phase. This is possible because of we don't use physical system, but simulated one. Next thing we want to focus is to make pendulum stay near state $(0, 0, 0, 0)$, where is trained. We want to achieve that by rewarding system to stay close to $(0, 0, 0, 0)$
 
 
 % autorův rozbor dosažených výsledků, vyzdvihnutí kladů a přínosu prezentovaného řešení,  kritika nedostatků ap.
